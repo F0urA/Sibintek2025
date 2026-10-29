@@ -1,0 +1,36 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies and generated output
+**/node_modules/
+**/dist/
+**/build/
+**/target/
+**/__pycache__/
+**/*.py[cod]
+
+# Runtime data
+**/logs/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+**/data/
+
+# Local IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Competition write-ups and solution material
+/WriteUps_Pathes Финал SIBCTF_2025.pdf

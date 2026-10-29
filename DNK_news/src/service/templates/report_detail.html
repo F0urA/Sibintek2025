@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="report-detail">
+    <div class="report-header">
+        {% if report.internal %}
+            <span class="internal-badge">Внутренний отчет</span>
+        {% endif %}
+        <h1>{{ report.title }}</h1>
+        <div class="report-meta-large">
+            <span class="report-author">Автор: {{ report.author.username }}</span>
+            <span class="separator">•</span>
+            <span class="report-date">{{ report.created_at.strftime('%d %B %Y, %H:%M') }}</span>
+        </div>
+    </div>
+    
+    <div class="report-section">
+        <h2>Описание</h2>
+        <div class="report-content">
+            {{ report.description }}
+        </div>
+    </div>
+    
+    {% if report.confidential_data %}
+        <div class="report-section confidential-section">
+            <h2>Конфиденциальные данные</h2>
+            <div class="report-content">
+                {{ report.confidential_data }}
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('reports.reports_list') }}">← Вернуться к списку отчетов</a>
+    </div>
+</div>
+{% endblock %}

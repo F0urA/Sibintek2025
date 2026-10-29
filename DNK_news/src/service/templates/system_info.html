@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Системная информация - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="admin-panel">
+    <h1>Системная информация</h1>
+    
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Пользователи</h3>
+            <div class="info-value">{{ info.users_count }}</div>
+            <p>Зарегистрировано пользователей</p>
+        </div>
+        
+        <div class="info-card">
+            <h3>Новости</h3>
+            <div class="info-value">{{ info.news_count }}</div>
+            <p>Всего новостей</p>
+        </div>
+        
+        <div class="info-card">
+            <h3>Приватные новости</h3>
+            <div class="info-value">{{ info.private_news_count }}</div>
+            <p>Конфиденциальных записей</p>
+        </div>
+        
+        <div class="info-card">
+            <h3>Отчеты</h3>
+            <div class="info-value">{{ info.reports_count }}</div>
+            <p>Всего отчетов</p>
+        </div>
+        
+        <div class="info-card">
+            <h3>Внутренние отчеты</h3>
+            <div class="info-value">{{ info.internal_reports_count }}</div>
+            <p>Конфиденциальных отчетов</p>
+        </div>
+    </div>
+    
+    <div class="back-link">
+        <a href="{{ url_for('admin.admin_panel') }}">← Вернуться в админ-панель</a>
+    </div>
+</div>
+{% endblock %}

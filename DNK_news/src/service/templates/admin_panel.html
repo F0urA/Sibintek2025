@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="admin-panel">
+    <h1>Панель администратора</h1>
+    
+    <div class="admin-section">
+        <h2>Проверка системных сервисов</h2>
+        <p class="section-description">Проверка доступности внутренних сервисов компании</p>
+        
+        <div class="service-checker">
+            <form id="service-check-form">
+                <div class="form-group">
+                    <label for="service_url">URL сервиса для проверки:</label>
+                    <input type="text" id="service_url" name="service_url" 
+                           placeholder="http://localhost:5000/api/..." class="url-input">
+                </div>
+                <button type="submit" class="btn btn-primary">Проверить сервис</button>
+            </form>
+            
+            <div id="check-result" class="check-result" style="display: none;">
+                <h3>Результат проверки:</h3>
+                <pre id="result-content"></pre>
+            </div>
+        </div>
+        
+        <div class="predefined-services">
+            <h3>Часто проверяемые сервисы:</h3>
+            <ul class="service-list">
+                {% for service in services %}
+                    <li class="service-item">
+                        <strong>{{ service.service_name }}</strong>
+                        <span class="service-url">{{ service.internal_url }}</span>
+                        <button class="btn btn-small quick-check" data-url="{{ service.internal_url }}">
+                            Быстрая проверка
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <div class="admin-section">
+        <h2>Дополнительные функции</h2>
+        <div class="admin-links">
+            <a href="{{ url_for('admin.system_info') }}" class="btn btn-secondary">Системная информация</a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('service-check-form');
+    const resultDiv = document.getElementById('check-result');
+    const resultContent = document.getElementById('result-content');
+    const quickCheckButtons = document.querySelectorAll('.quick-check');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const serviceUrl = document.getElementById('service_url').value;
+        if (!serviceUrl) {
+            alert('Введите URL сервиса');
+            return;
+        }
+        
+        checkService(serviceUrl);
+    });
+    
+    quickCheckButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            document.getElementById('service_url').value = url;
+            checkService(url);
+        });
+    });
+    
+    function checkService(url) {
+        resultContent.textContent = 'Проверка...';
+        resultDiv.style.display = 'block';
+        
+        fetch('{{ url_for("admin.check_service") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'service_url=' + encodeURIComponent(url)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                resultContent.textContent = data.response;
+            } else {
+                resultContent.textContent = 'Ошибка: ' + (data.message || 'Неизвестная ошибка');
+            }
+        })
+        .catch(error => {
+            resultContent.textContent = 'Ошибка сети: ' + error.message;
+        });
+    }
+});
+</script>
+{% endblock %}

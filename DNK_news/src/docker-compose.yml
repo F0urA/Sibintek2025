@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  dnk_news:
+    build: .
+    container_name: dnk_news
+    ports:
+      - "3000:3000"
+    volumes:
+      - db_data:/app/instance
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - PORT=3000
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+    restart: unless-stopped
+    networks:
+      - dnk_network
+
+networks:
+  dnk_network:
+    driver: bridge
+
+volumes:
+  db_data:

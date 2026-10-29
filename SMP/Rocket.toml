@@ -1,0 +1,14 @@
+[default]
+address = "127.0.0.1"
+port = 7000
+
+[default.databases.pigeon_db]
+url = "pigeons.db"
+
+[release]
+address = "0.0.0.0"
+port = 7000
+
+[release.databases.pigeon_db]
+url = "data/pigeons.db"
+

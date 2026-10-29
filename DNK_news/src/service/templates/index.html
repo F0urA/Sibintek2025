@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}DNK Space News - Космический новостной портал{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1>Добро пожаловать в DNK Space News</h1>
+        <p class="hero-subtitle">Новостной портал космической нефтяной корпорации DNK</p>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-number">250+</span>
+                <span class="stat-label">млрд $</span>
+                <span class="stat-desc">Капитализация</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">15</span>
+                <span class="stat-label">станций</span>
+                <span class="stat-desc">Орбитальные базы</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">3</span>
+                <span class="stat-label">планеты</span>
+                <span class="stat-desc">Добыча ресурсов</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="latest-news-section">
+    <h2>Последние новости</h2>
+    
+    {% if latest_news %}
+        <div class="news-grid">
+            {% for news in latest_news %}
+                <article class="news-card">
+                    <div class="news-category">{{ news.category }}</div>
+                    <h3 class="news-title">
+                        <a href="{{ url_for('news.news_detail', news_id=news.id) }}">{{ news.title }}</a>
+                    </h3>
+                    <p class="news-excerpt">
+                        {{ news.content[:150] }}...
+                    </p>
+                    <div class="news-meta">
+                        <span class="news-author">{{ news.author.username }}</span>
+                        <span class="news-date">{{ news.created_at.strftime('%d.%m.%Y') }}</span>
+                    </div>
+                    <a href="{{ url_for('news.news_detail', news_id=news.id) }}" class="read-more">Читать далее →</a>
+                </article>
+            {% endfor %}
+        </div>
+        
+        <div class="view-all">
+            <a href="{{ url_for('news.news_list') }}" class="btn btn-primary">Все новости</a>
+        </div>
+    {% else %}
+        <p class="no-news">Нет доступных новостей.</p>
+    {% endif %}
+</section>
+
+<section class="about-section">
+    <h2>О компании DNK Space News</h2>
+    <div class="about-grid">
+        <div class="about-card">
+            <h3>🛰️ Орбитальная добыча</h3>
+            <p>Сеть космических станций для добычи редких минералов и энергетических ресурсов на орбитах Юпитера, Сатурна и в поясе астероидов.</p>
+        </div>
+        <div class="about-card">
+            <h3>⚡ Квантовая переработка</h3>
+            <p>Современные орбитальные НПЗ с квантовыми реакторами обеспечивают максимальную эффективность переработки космических ресурсов.</p>
+        </div>
+        <div class="about-card">
+            <h3>🌌 Межпланетная логистика</h3>
+            <p>Флот из 200+ грузовых кораблей обеспечивает доставку ресурсов между планетарными системами и орбитальными станциями.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

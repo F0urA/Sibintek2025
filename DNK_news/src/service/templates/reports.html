@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Отчеты - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Мои отчеты</h1>
+    <a href="{{ url_for('reports.create_report') }}" class="btn btn-primary">Создать отчет</a>
+</div>
+
+{% if reports %}
+    <div class="reports-list">
+        {% for report in reports %}
+            <div class="report-card">
+                {% if report.internal %}
+                    <span class="internal-badge">Внутренний</span>
+                {% endif %}
+                <h3><a href="{{ url_for('reports.view_report', report_id=report.id) }}">{{ report.title }}</a></h3>
+                <p class="report-excerpt">{{ report.description[:150] }}...</p>
+                <div class="report-meta">
+                    <span class="report-date">{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p>У вас пока нет отчетов.</p>
+        <a href="{{ url_for('reports.create_report') }}" class="btn btn-primary">Создать первый отчет</a>
+    </div>
+{% endif %}
+{% endblock %}

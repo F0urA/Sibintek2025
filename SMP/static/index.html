@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Mail Pigeons - Космическая почта</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+    <div id="notification" class="notification"></div>
+
+    <div id="auth-section" class="auth-wrapper">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo">🚀🕊️</div>
+                <h1>Space Mail Pigeons</h1>
+                <p class="subtitle">Космическая система доставки сообщений</p>
+            </div>
+
+            <div id="login-form" class="auth-form">
+                <h2>Вход в систему</h2>
+                <div class="input-group">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="login-username" placeholder="Имя пользователя" autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="login-password" placeholder="Пароль" autocomplete="current-password">
+                </div>
+                <button onclick="login()" class="btn btn-primary">Войти</button>
+                <p class="switch-form">Нет аккаунта? <a href="#" onclick="showRegister()">Зарегистрируйтесь</a></p>
+            </div>
+
+            <div id="register-form" class="auth-form" style="display:none;">
+                <h2>Регистрация</h2>
+                <div class="input-group">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="register-username" placeholder="Имя пользователя" autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="register-password" placeholder="Пароль" autocomplete="new-password">
+                </div>
+                <button onclick="register()" class="btn btn-primary">Зарегистрироваться</button>
+                <p class="switch-form">Уже есть аккаунт? <a href="#" onclick="showLogin()">Войдите</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-section" style="display:none;">
+        <header class="main-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo-small">🚀🕊️</div>
+                    <h1>Space Mail Pigeons</h1>
+                    <p class="company-name">Космическая почта</p>
+                </div>
+                <div class="header-right">
+                    <span id="username-display" class="username"></span>
+                    <button onclick="showGetMessageModal()" class="btn btn-secondary">Сообщения</button>
+                    <button onclick="showProfileModal()" class="btn btn-secondary">Профиль</button>
+                    <button onclick="logout()" class="btn btn-logout">Выйти</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <aside class="sidebar">
+                <div class="card">
+                    <h2>➕ Регистрация почтового голубя</h2>
+                    <form id="add-pigeon-form" onsubmit="addPigeon(event)">
+                        <div class="form-group">
+                            <label for="pigeon-name">Имя голубя</label>
+                            <input type="text" id="pigeon-name" placeholder="Например, Быстрый" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pigeon-color">Цвет оперения</label>
+                            <input type="text" id="pigeon-color" placeholder="Например, Серебристый" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pigeon-age">Возраст (лет)</label>
+                            <input type="number" id="pigeon-age" placeholder="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pigeon-description">Описание</label>
+                            <textarea id="pigeon-description" placeholder="Маршруты доставки, особенности..." rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Зарегистрировать</button>
+                    </form>
+                </div>
+
+                <div class="stats-card card">
+                    <h3>📊 Статистика голубятни</h3>
+                    <div class="stat-item">
+                        <span>Всего почтовых голубей:</span>
+                        <span id="total-pigeons" class="stat-value">0</span>
+                    </div>
+                    <div id="stats-details"></div>
+                </div>
+            </aside>
+
+            <main class="main-content">
+                <div class="card">
+                    <div class="section-header">
+                        <h2>✉️🕊️ Реестр почтовых голубей</h2>
+                        <div class="search-bar">
+                            <input type="text" id="search-input" placeholder="🔍 Поиск..." onkeyup="handleSearch()">
+                            <select id="color-filter" onchange="handleSearch()">
+                                <option value="">Все цвета</option>
+                            </select>
+                        </div>
+                        <div class="view-toggle">
+                            <button onclick="setView('grid')" class="view-btn active" id="grid-view">⊞</button>
+                            <button onclick="setView('list')" class="view-btn" id="list-view">☰</button>
+                        </div>
+                    </div>
+                    <div id="pigeons-container" class="pigeons-grid"></div>
+                    <div id="pagination" class="pagination"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="send-message-modal-popup" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeSendMessageModalPopup()">&times;</span>
+            <h2>✉️ Отправить сообщение через голубя</h2>
+            <p class="modal-subtitle">Голубь: <strong id="modal-pigeon-name"></strong></p>
+            <form id="send-message-form-popup" onsubmit="sendMessageFromModal(event)">
+                <input type="hidden" id="modal-pigeon-id" value="">
+                <div class="form-group">
+                    <label for="modal-message-recipient">Получатель (username)</label>
+                    <input type="text" id="modal-message-recipient" placeholder="username получателя" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-message-subject">Тема сообщения</label>
+                    <input type="text" id="modal-message-subject" placeholder="Тема сообщения" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-message-content">Текст сообщения</label>
+                    <textarea id="modal-message-content" placeholder="Содержание сообщения..." rows="6" required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">📤 Отправить</button>
+                    <button type="button" onclick="closeSendMessageModalPopup()" class="btn btn-secondary">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="get-message-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeGetMessageModal()">&times;</span>
+            <h2>📬 Получить сообщение по UUID</h2>
+
+            <div id="get-message-input-section">
+                <form id="get-message-form" onsubmit="getMessageByUuid(event)">
+                    <div class="form-group">
+                        <label for="message-uuid-input">UUID сообщения</label>
+                        <input type="text" id="message-uuid-input" placeholder="Введите UUID сообщения" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">🔍 Получить</button>
+                        <button type="button" onclick="closeGetMessageModal()" class="btn btn-secondary">Отмена</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="get-message-result-section" style="display:none;">
+                <div class="message-display-card">
+                    <div class="message-header">
+                        <h3 id="display-message-subject"></h3>
+                        <div class="message-meta">
+                            <span class="message-meta-item">
+                                <strong>От:</strong> <span id="display-message-sender"></span>
+                            </span>
+                            <span class="message-meta-item">
+                                <strong>Кому:</strong> <span id="display-message-recipient"></span>
+                            </span>
+                            <span class="message-meta-item">
+                                <strong>Дата:</strong> <span id="display-message-date"></span>
+                            </span>
+                            <span class="message-meta-item">
+                                <strong>UUID:</strong> <span id="display-message-id"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="message-content">
+                        <p id="display-message-content"></p>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="resetGetMessageModal()" class="btn btn-primary">🔍 Найти другое</button>
+                    <button type="button" onclick="closeGetMessageModal()" class="btn btn-secondary">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-uuid-modal" class="modal" style="display:none;">
+        <div class="modal-content uuid-modal">
+            <span class="close" onclick="closeMessageUuidModal()">&times;</span>
+            <h2>✅ Сообщение отправлено!</h2>
+            <p class="modal-subtitle">Голубь полетел! Передайте этот UUID получателю:</p>
+
+            <div class="uuid-display-box">
+                <div class="uuid-icon">🔑</div>
+                <div class="uuid-text">
+                    <label>UUID сообщения:</label>
+                    <div class="uuid-value" id="message-uuid-display"></div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" onclick="copyMessageUuid()" class="btn btn-primary">📋 Копировать UUID</button>
+                <button type="button" onclick="closeMessageUuidModal()" class="btn btn-secondary">Закрыть</button>
+            </div>
+
+            <p class="uuid-hint">💡 Получатель сможет прочитать сообщение, используя этот UUID в разделе "Получить сообщение"</p>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeProfileModal()">&times;</span>
+            <h2>👤 Профиль пользователя</h2>
+
+            <div class="profile-info">
+                <div class="profile-item">
+                    <span class="profile-label">Имя пользователя:</span>
+                    <span class="profile-value" id="profile-username"></span>
+                </div>
+                <div class="profile-item">
+                    <span class="profile-label">Дата регистрации:</span>
+                    <span class="profile-value" id="profile-created-at"></span>
+                </div>
+            </div>
+
+            <form id="update-profile-form" onsubmit="updateProfile(event)">
+                <div class="form-group">
+                    <label for="profile-new-password">Новый пароль (оставьте пустым, чтобы не менять)</label>
+                    <input type="password" id="profile-new-password" placeholder="Новый пароль" autocomplete="new-password">
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+                    <button type="button" onclick="closeProfileModal()" class="btn btn-secondary">Закрыть</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-pigeon-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditPigeonModal()">&times;</span>
+            <h2>✏️ Редактировать почтового голубя</h2>
+
+            <form id="edit-pigeon-form" onsubmit="saveEditedPigeon(event)">
+                <input type="hidden" id="edit-pigeon-id" value="">
+                <div class="form-group">
+                    <label for="edit-pigeon-name">Имя голубя</label>
+                    <input type="text" id="edit-pigeon-name" placeholder="Имя голубя" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-pigeon-color">Цвет оперения</label>
+                    <input type="text" id="edit-pigeon-color" placeholder="Цвет оперения" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-pigeon-age">Возраст (лет)</label>
+                    <input type="number" id="edit-pigeon-age" placeholder="0" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-pigeon-description">Описание</label>
+                    <textarea id="edit-pigeon-description" placeholder="Описание..." rows="3" required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+                    <button type="button" onclick="closeEditPigeonModal()" class="btn btn-secondary">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Создание отчета - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Создание отчета</h1>
+    
+    <form method="POST" action="{{ url_for('reports.create_report') }}" class="content-form">
+        <div class="form-group">
+            <label for="title">Название отчета *</label>
+            <input type="text" id="title" name="title" required maxlength="200">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Описание проблемы *</label>
+            <textarea id="description" name="description" rows="8" required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="confidential_data">Конфиденциальные данные</label>
+            <textarea id="confidential_data" name="confidential_data" rows="4" 
+                      placeholder="Дополнительная информация, доступная только с внутренней сети"></textarea>
+            <small>Эти данные будут доступны только при доступе с внутренней сети DNK</small>
+        </div>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="internal">
+                Внутренний отчет (конфиденциальные данные)
+            </label>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Создать отчет</button>
+            <a href="{{ url_for('reports.reports_list') }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

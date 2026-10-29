@@ -1,0 +1,30 @@
+services:
+  smp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smp
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    volumes:
+      - pigeon-data:/app/data
+    environment:
+      - ROCKET_ADDRESS=0.0.0.0
+      - ROCKET_PORT=7000
+      - ROCKET_LOG_LEVEL=normal
+      - TZ=Europe/Moscow
+    healthcheck:
+      test: ["CMD-SHELL", "pidof SMP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.dnk.service=space-mail-pigeons"
+      - "com.dnk.description=Space Mail Pigeons"
+
+volumes:
+  pigeon-data:
+    driver: local
+    name: smp-data

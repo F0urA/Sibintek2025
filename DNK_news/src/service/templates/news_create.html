@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Создание новости - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Создание новости</h1>
+    
+    <form method="POST" action="{{ url_for('news.create_news') }}" class="content-form">
+        <div class="form-group">
+            <label for="title">Заголовок новости *</label>
+            <input type="text" id="title" name="title" required maxlength="200">
+        </div>
+        
+        <div class="form-group">
+            <label for="category">Категория *</label>
+            <select id="category" name="category" required>
+                <option value="">Выберите категорию</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="content">Содержание новости *</label>
+            <textarea id="content" name="content" rows="15" required></textarea>
+        </div>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="is_private">
+                Приватная новость (видна только вам)
+            </label>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Опубликовать</button>
+            <a href="{{ url_for('news.news_list') }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

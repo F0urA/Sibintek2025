@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ news.title }} - DNK Space News{% endblock %}
+
+{% block content %}
+<article class="news-detail">
+    <div class="news-header">
+        {% if news.is_private %}
+            <span class="private-badge">Приватная новость</span>
+        {% endif %}
+        <div class="news-category-large">{{ news.category }}</div>
+        <h1>{{ news.title }}</h1>
+        <div class="news-meta-large">
+            <span class="news-author">Автор: {{ news.author.username }}</span>
+            <span class="separator">•</span>
+            <span class="news-date">{{ news.created_at.strftime('%d %B %Y, %H:%M') }}</span>
+        </div>
+    </div>
+    
+    <div class="news-content">
+        {{ news.content|safe }}
+    </div>
+    
+    {% if current_user.is_authenticated and (current_user.id == news.author_id or current_user.role == 'admin') %}
+        <div class="news-actions">
+            <a href="{{ url_for('news.edit_news', news_id=news.id) }}" class="btn btn-secondary">Редактировать</a>
+            <form method="POST" action="{{ url_for('news.delete_news', news_id=news.id) }}" style="display: inline;" 
+                  onsubmit="return confirm('Вы уверены, что хотите удалить эту новость?');">
+                <button type="submit" class="btn btn-danger">Удалить</button>
+            </form>
+        </div>
+    {% endif %}
+    
+    <div class="back-link">
+        <a href="{{ url_for('news.news_list') }}">← Вернуться к списку новостей</a>
+    </div>
+</article>
+{% endblock %}

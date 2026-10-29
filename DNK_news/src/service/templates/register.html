@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>Регистрация в системе</h2>
+        <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
+            <div class="form-group">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" name="username" required autofocus>
+                <small>Только латинские буквы и цифры</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required>
+                <small>Минимум 6 символов</small>
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" name="is_journalist">
+                    Я журналист (разрешено публиковать новости)
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Уже есть аккаунт? <a href="{{ url_for('auth.login') }}">Войти</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

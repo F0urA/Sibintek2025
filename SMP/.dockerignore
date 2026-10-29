@@ -1,0 +1,55 @@
+# Исключаем директорию target для ускорения сборки
+target/
+debug/
+release/
+
+# Git файлы
+.git/
+.gitignore
+.gitattributes
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Документация
+*.md
+README.md
+LICENSE
+
+# Docker файлы
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+.dockerignore
+
+# База данных (будет создана внутри контейнера)
+*.db
+*.db-shm
+*.db-wal
+
+# Логи
+*.log
+
+# Временные файлы
+tmp/
+temp/
+.DS_Store
+
+# Python файлы (forcad)
+forcad/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+ENV/
+
+# Прочее
+.env
+.env.local
+

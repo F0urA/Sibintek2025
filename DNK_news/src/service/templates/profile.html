@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Профиль пользователя</h1>
+        <div class="user-badge user-badge-{{ current_user.role }}">{{ current_user.role }}</div>
+    </div>
+    
+    <div class="profile-info">
+        <div class="info-row">
+            <span class="info-label">Имя пользователя:</span>
+            <span class="info-value">{{ current_user.username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">{{ current_user.email }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Роль:</span>
+            <span class="info-value">
+                {% if current_user.role == 'admin' %}Администратор
+                {% elif current_user.role == 'journalist' %}Журналист
+                {% else %}Пользователь{% endif %}
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Дата регистрации:</span>
+            <span class="info-value">{{ current_user.created_at.strftime('%d.%m.%Y') }}</span>
+        </div>
+    </div>
+    
+    <div class="profile-edit">
+        <h2>Редактировать профиль</h2>
+        <form method="POST" action="{{ url_for('auth.edit_profile') }}" class="profile-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ current_user.email }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="bio">О себе</label>
+                <textarea id="bio" name="bio" rows="4">{{ current_user.bio or '' }}</textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        </form>
+    </div>
+    
+    {% if current_user.role in ['journalist', 'admin'] %}
+        <div class="user-content">
+            <h2>Мои новости ({{ user_news|length }})</h2>
+            {% if user_news %}
+                <div class="content-list">
+                    {% for news in user_news %}
+                        <div class="content-item">
+                            {% if news.is_private %}
+                                <span class="private-badge-small">Приватная</span>
+                            {% endif %}
+                            <a href="{{ url_for('news.news_detail', news_id=news.id) }}">{{ news.title }}</a>
+                            <span class="item-date">{{ news.created_at.strftime('%d.%m.%Y') }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-message">У вас пока нет опубликованных новостей.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+    
+    <div class="user-content">
+        <h2>Мои отчеты ({{ user_reports|length }})</h2>
+        {% if user_reports %}
+            <div class="content-list">
+                {% for report in user_reports %}
+                    <div class="content-item">
+                        {% if report.internal %}
+                            <span class="internal-badge-small">Внутренний</span>
+                        {% endif %}
+                        <a href="{{ url_for('reports.view_report', report_id=report.id) }}">{{ report.title }}</a>
+                        <span class="item-date">{{ report.created_at.strftime('%d.%m.%Y') }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-message">У вас пока нет отчетов.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

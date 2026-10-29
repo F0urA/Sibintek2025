@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Новости - DNK Space News{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Новости компании</h1>
+    {% if current_user.is_authenticated and current_user.role in ['journalist', 'admin'] %}
+        <a href="{{ url_for('news.create_news') }}" class="btn btn-primary">Создать новость</a>
+    {% endif %}
+</div>
+
+{% if news_pagination.items %}
+    <div class="news-list">
+        {% for news in news_pagination.items %}
+            <article class="news-card">
+                {% if news.is_private %}
+                    <span class="private-badge">Приватная</span>
+                {% endif %}
+                <div class="news-category">{{ news.category }}</div>
+                <h3 class="news-title">
+                    <a href="{{ url_for('news.news_detail', news_id=news.id) }}">{{ news.title }}</a>
+                </h3>
+                <p class="news-excerpt">{{ news.content[:200] }}...</p>
+                <div class="news-meta">
+                    <span class="news-author">Автор: {{ news.author.username }}</span>
+                    <span class="news-date">{{ news.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <a href="{{ url_for('news.news_detail', news_id=news.id) }}" class="read-more">Читать полностью →</a>
+            </article>
+        {% endfor %}
+    </div>
+    
+    {% if news_pagination.pages > 1 %}
+        <div class="pagination">
+            {% if news_pagination.has_prev %}
+                <a href="{{ url_for('news.news_list', page=news_pagination.prev_num) }}" class="btn">← Предыдущая</a>
+            {% endif %}
+            
+            <span class="page-info">Страница {{ news_pagination.page }} из {{ news_pagination.pages }}</span>
+            
+            {% if news_pagination.has_next %}
+                <a href="{{ url_for('news.news_list', page=news_pagination.next_num) }}" class="btn">Следующая →</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% else %}
+    <div class="empty-state">
+        <p>Новостей пока нет.</p>
+        {% if current_user.is_authenticated and current_user.role in ['journalist', 'admin'] %}
+            <a href="{{ url_for('news.create_news') }}" class="btn btn-primary">Создать первую новость</a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
