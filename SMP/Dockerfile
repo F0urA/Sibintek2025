@@ -1,5 +1,5 @@
 # Multi-stage build для оптимизации размера образа
-FROM rust:1.91-slim-bullseye as builder
+FROM rust:1.91-slim-bookworm AS builder
 
 # Установка зависимостей для сборки
 RUN apt-get update && apt-get install -y \
@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     touch src/main.rs && cargo build --release
 
 # Финальный образ
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # Создание пользователя для запуска приложения
 RUN useradd -m -u 1000 dnamail && \

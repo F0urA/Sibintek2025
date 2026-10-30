@@ -1,0 +1,75 @@
+# Local API-only deployment for AD practice. All published ports bind to loopback.
+services:
+  news:
+    build: ../DNK_news/src
+    environment:
+      SECRET_KEY: ${SIBINTEK_NEWS_SECRET:?Run python3 AD_training/training.py up}
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - news_data:/app/instance
+
+  smp:
+    build: ../SMP
+    environment:
+      ROCKET_PROFILE: release
+      ROCKET_ADDRESS: 0.0.0.0
+      ROCKET_PORT: "7000"
+    ports:
+      - "127.0.0.1:7000:7000"
+    volumes:
+      - smp_data:/app/data
+
+  web_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: dws_db
+      POSTGRES_USER: checker
+      POSTGRES_PASSWORD: ${SIBINTEK_WEB_DB_PASSWORD:?Run python3 AD_training/training.py up}
+    volumes:
+      - web_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checker -d dws_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  web:
+    build: ../DNK_web/backend
+    environment:
+      DATABASE_URL: postgres://checker:${SIBINTEK_WEB_DB_PASSWORD:?Run python3 AD_training/training.py up}@web_db:5432/dws_db
+      JWT_SECRET: ${SIBINTEK_WEB_JWT_SECRET:?Run python3 AD_training/training.py up}
+      MINIO_ENDPOINT: 127.0.0.1
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: localchecker
+      MINIO_SECRET_KEY: localcheckerpassword
+      PORT: "5001"
+    depends_on:
+      web_db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5001:5001"
+
+  blackline:
+    build: ../DNK_blackLine/backend
+    environment:
+      ADDR: :8080
+      KEYS_DIR: /app/keys
+      LOGS_DIR: /app/logs
+      DATA_DIR: /app/data
+      DATABASE_URL: ""
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - blackline_keys:/app/keys
+      - blackline_logs:/app/logs
+      - blackline_data:/app/data
+
+volumes:
+  news_data:
+  smp_data:
+  web_db_data:
+  blackline_keys:
+  blackline_logs:
+  blackline_data:
