@@ -6,7 +6,7 @@ services:
       SECRET_KEY: ${SIBINTEK_NEWS_SECRET:?Run python3 AD_training/training.py up}
       PORT: "3000"
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${SIBINTEK_NEWS_PORT:-3000}:3000"
     volumes:
       - news_data:/app/instance
 
@@ -17,7 +17,7 @@ services:
       ROCKET_ADDRESS: 0.0.0.0
       ROCKET_PORT: "7000"
     ports:
-      - "127.0.0.1:7000:7000"
+      - "127.0.0.1:${SIBINTEK_SMP_PORT:-7000}:7000"
     volumes:
       - smp_data:/app/data
 
@@ -49,7 +49,7 @@ services:
       web_db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:5001:5001"
+      - "127.0.0.1:${SIBINTEK_WEB_PORT:-5001}:5001"
 
   blackline:
     build: ../DNK_blackLine/backend
@@ -60,7 +60,7 @@ services:
       DATA_DIR: /app/data
       DATABASE_URL: ""
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${SIBINTEK_BLACKLINE_PORT:-8080}:8080"
     volumes:
       - blackline_keys:/app/keys
       - blackline_logs:/app/logs

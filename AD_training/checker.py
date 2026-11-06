@@ -231,6 +231,24 @@ def blackline_login(client, state):
     client.token = data["jwt"]
 
 
+def blackline_find_tank(client, email, limit=512):
+    """Locate the tank auto-created for this owner via the public summary.
+
+    PUT /api/retail/profile/config seeds one tank per owner, but no API returns
+    its id. Tank ids are contiguous from 1 (tanks are never deleted), so we scan
+    the unauthenticated summary endpoint and match our own owner_email; the first
+    404 marks the end of the range.
+    """
+    for tank_id in range(1, limit + 1):
+        try:
+            _, data = client.json("GET", f"/api/retail/tanks/{tank_id}/summary")
+        except CheckerError:
+            break
+        if data.get("owner_email") == email:
+            return tank_id
+    return None
+
+
 def put_blackline(client, slot, flag):
     username, password = unique_user("checker")
     email = username + "@local.invalid"
@@ -244,6 +262,10 @@ def put_blackline(client, slot, flag):
     if slot in BLACKLINE_PATHS:
         path, field = BLACKLINE_PATHS[slot]
         client.json("PUT", path, {field: flag})
+        if slot == "retail":
+            tank_id = blackline_find_tank(client, email)
+            need(tank_id is not None, "Could not locate retail tank for attack_data")
+            state["tank_id"] = tank_id
     elif slot == "fleet":
         _, webhook = client.json("POST", "/api/fleet/webhooks", {
             "url": "http://127.0.0.1:9/checker", "secret_token": flag,
@@ -288,7 +310,9 @@ def attack_data(service, slot, state):
         return {"route_id": state["route_id"]} if slot == "route" else {}
     if slot == "fleet":
         return {"webhook_id": state["webhook_id"]}
-    if slot in ("profile", "finance", "retail"):
+    if slot == "retail":
+        return {"user_id": state["user_id"], "tank_id": state["tank_id"]}
+    if slot in ("profile", "finance"):
         return {"user_id": state["user_id"]}
     return {}
 

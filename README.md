@@ -13,7 +13,8 @@
 | [SMP](SMP/README.md) | Голуби и сообщения | Rust/Rocket, SQLite | `7000` |
 | [DNK_blackLine](DNK_blackLine/README.md) | Профиль, флот, финансы и аудит | Go, файловое хранилище | `8080` |
 
-- [AD_training](AD_training/README.md) — чекер, Docker Compose и скрипт запуска.
+- [AD_training](AD_training/README.md) — чекер, самопроверка `selftest.py`, Docker
+  Compose и скрипт запуска.
 - [writeups](<writeups/WriteUps_Pathes Финал SIBCTF_2025.pdf>) — райтапы, по
   которым выбраны места хранения флагов.
 
@@ -31,6 +32,18 @@ python3 AD_training/checker.py check smp
 python3 AD_training/checker.py put smp --slot message --flag 'FLAG{example}' > /tmp/sibintek-round.json
 python3 AD_training/checker.py get smp --slot message --flag 'FLAG{example}' --state @/tmp/sibintek-round.json
 ```
+
+Полная самопроверка — `put` каждого слота и извлечение флага настоящим
+эксплойтом из райтапа:
+
+```bash
+python3 AD_training/selftest.py
+```
+
+Если порт занят, задайте его перед запуском, например
+`SIBINTEK_BLACKLINE_PORT=8085 python3 AD_training/training.py up` (и передайте
+`--blackline-url http://127.0.0.1:8085` чекеру/selftest). Полный список
+переменных — в [инструкции чекера](AD_training/README.md).
 
 `put` возвращает JSON с приватным `state` для будущих проверок и отдельным
 `attack_data`, которое можно передать атакующим. Все 11 слотов и формат ответа
