@@ -49,6 +49,25 @@ def cmd_tokens(args):
     return 0
 
 
+def cmd_backup(args):
+    path = Path(args.path)
+    if path.exists() and not args.force:
+        print(f"{path} already exists; pass --force to overwrite", file=sys.stderr)
+        return 1
+    if not Path(args.db).exists():
+        print(f"{args.db} not found; nothing to back up", file=sys.stderr)
+        return 1
+    db = DB(args.db)
+    try:
+        db.backup(str(path))
+    finally:
+        db.close()
+    os.chmod(path, 0o600)
+    print(f"Backed up {args.db} -> {path} (the game keeps running). "
+          "Keep it with jury.json; restore by stopping the jury and copying it back.")
+    return 0
+
+
 def serve(server, name):
     thread = threading.Thread(target=server.serve_forever, name=name, daemon=True)
     thread.start()
@@ -103,11 +122,18 @@ def main():
 
     sub.add_parser("tokens", help="print team tokens from the config")
 
+    backup = sub.add_parser("backup", help="online backup of the game database")
+    backup.add_argument("path", help="destination file for the backup")
+    backup.add_argument("--db", default=str(config.DEFAULT_DB),
+                        help="SQLite file to back up (default: AD_training/jury/data/jury.sqlite)")
+    backup.add_argument("--force", action="store_true")
+
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     try:
-        return {"init": cmd_init, "run": cmd_run, "tokens": cmd_tokens}[args.command](args)
+        return {"init": cmd_init, "run": cmd_run, "tokens": cmd_tokens,
+                "backup": cmd_backup}[args.command](args)
     except config.ConfigError as exc:
         print(f"config error: {exc}", file=sys.stderr)
         return 2

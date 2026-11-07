@@ -183,11 +183,88 @@ too old`, `Flag is your own`, `Flag already stolen`, `Game not started`,
 раунды` (раунды `CHECK_FAILED` не в счёт). Итог команды — `Σ(FP × SLA)` по
 сервисам. Вся формула в [jury/scoring.py](jury/scoring.py), её легко заменить.
 
+### Хранение и бэкап базы
+
+Игра лежит в `AD_training/jury/data/jury.sqlite` — там флаги, результаты
+проверок и **токены команд**. Каталог `jury/data/` стоит держать `chmod 700`,
+а бэкапы — `0600` (подкоманда ставит их сама). База работает в режиме WAL,
+поэтому копировать один файл `cp` небезопасно — часть данных лежит в `-wal`.
+Корректный бэкап живой игры — подкомандой:
+
+```bash
+python3 AD_training/jury backup /var/backups/jury-$(date +%F-%H%M).sqlite
+```
+
+Она делает онлайновый снимок, не останавливая раунды. Бэкапьте вместе с
+`jury.json` (без него токены из базы не сопоставить с командами). Пример в cron
+раз в 5 минут:
+
+```cron
+*/5 * * * * cd /opt/Sibintek2025 && python3 AD_training/jury backup /var/backups/jury-$(date +\%F-\%H\%M).sqlite
+```
+
+Восстановление: остановить службу (`systemctl stop sibintek-jury`), положить
+копию как `jury/data/jury.sqlite`, удалить рядом `jury.sqlite-wal` и
+`jury.sqlite-shm`, запустить службу. Игра продолжится с сохранённого раунда.
+
+## Деплой на несколько VM
+
+Боевая схема: одна VM — жюри, по одной VM на команду с копией сервисов
+(вулнбокс). Жюри ходит к сервисам каждой команды по сети, команды сдают флаги
+жюри.
+
+**Порты.** На вулнбоксе входящие от жюри: `3000` (news), `7000` (smp), `5001`
+(web), `8080` (blackline). На жюри входящие от команд: `8000/tcp` (борда и
+`PUT /flags`) и `31337/tcp` (приём флагов по TCP). Открывать только в игровой
+сети/VPN — сервисы намеренно уязвимы.
+
+**1. На каждом вулнбоксе** — поднять сервисы на внутреннем интерфейсе и включить
+автозапуск Docker:
+
+```bash
+sudo systemctl enable docker
+SIBINTEK_BIND=<internal-ip> python3 AD_training/training.py up --restart unless-stopped
+```
+
+`SIBINTEK_BIND` привязывает порты к конкретному адресу (безопаснее, чем
+`--public`, который слушает `0.0.0.0`). `--restart unless-stopped` + включённый
+`docker.service` поднимают контейнеры после перезагрузки; если внутренний IP
+встаёт позже Docker, политика ретраит старт, пока адрес не появится. Проверьте
+ребутом: после `reboot` — `python3 AD_training/training.py ps` показывает все
+сервисы `Up`. Порядок старта можно зафиксировать oneshot-юнитом
+(см. [deploy/README.md](deploy/README.md)).
+
+**2. На VM жюри** — создать конфиг с реальными адресами команд, раздать токены,
+поставить службу:
+
+```bash
+python3 AD_training/jury init --teams 4 --ip-template 10.60.{n}.2   # подставьте свою сеть
+python3 AD_training/jury tokens                                     # раздать командам
+# установить и запустить службу жюри — см. deploy/README.md
+sudo systemctl enable --now sibintek-jury
+```
+
+Шаблон systemd-юнита и инструкция установки — в
+[deploy/sibintek-jury.service](deploy/sibintek-jury.service) и
+[deploy/README.md](deploy/README.md).
+
+**3. Проверка перед игрой** (с машины жюри по адресам команды):
+
+```bash
+python3 AD_training/checker.py health smp --url http://<team-ip>:7000
+python3 AD_training/selftest.py \
+    --news-url http://<team-ip>:3000 --smp-url http://<team-ip>:7000 \
+    --web-url http://<team-ip>:5001 --blackline-url http://<team-ip>:8080
+```
+
+`selftest` должен дать 11/11. Затем откройте борду `http://<jury>:8000/` —
+после первого раунда все пары «команда × сервис» должны быть UP, SLA 100 %.
+
 ### Тесты жюри
 
 ```bash
 python3 -m unittest discover -s AD_training/jury
 ```
 
-Гоняют раунды, сдачу (принят/свой/повтор/протух/мусор), подсчёт, SLA, HTTP+TCP
-и поиск танка на SQLite в памяти с фейковым чекером — Docker не нужен.
+Гоняют раунды, сдачу (принят/свой/повтор/протух/мусор), подсчёт, SLA, HTTP+TCP,
+бэкап и поиск танка на SQLite в памяти с фейковым чекером — Docker не нужен.

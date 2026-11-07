@@ -32,15 +32,23 @@ def main():
     parser.add_argument("action", choices=("up", "down", "ps"))
     parser.add_argument("--public", action="store_true",
                         help="vulnbox mode: publish ports on 0.0.0.0 so the jury and "
-                             "other teams can reach them (game network/VPN only!)")
+                             "other teams can reach them (game network/VPN only!). "
+                             "Prefer SIBINTEK_BIND=<internal-ip> for a specific interface.")
+    parser.add_argument("--restart", choices=("no", "unless-stopped", "always"),
+                        default="no",
+                        help="container restart policy (default: no). Use unless-stopped "
+                             "on a vulnbox so services come back after a reboot.")
     args = parser.parse_args()
     env = dict(os.environ)
     if args.action == "up":
         ensure_secrets()
+        env["SIBINTEK_RESTART"] = args.restart
         if args.public:
             env["SIBINTEK_BIND"] = "0.0.0.0"
             print("WARNING: intentionally vulnerable services are now listening on all "
                   "interfaces. Expose them only inside the game network/VPN.")
+        print(f"Publishing ports on {env.get('SIBINTEK_BIND', '127.0.0.1')} "
+              f"with restart policy '{args.restart}'.")
     command = ["docker", "compose", "--env-file", str(ENV_FILE),
                "-f", str(ROOT / "compose.yml")]
     command += {"up": ["up", "--build", "-d"], "down": ["down"], "ps": ["ps"]}[args.action]

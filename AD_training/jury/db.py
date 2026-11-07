@@ -48,6 +48,19 @@ class DB:
         with self.lock:
             self.conn.close()
 
+    def backup(self, path):
+        """Consistent online backup of the live (WAL) database to `path`.
+
+        Uses sqlite's backup API, which is safe while the game is running —
+        unlike copying the file, which can miss the -wal contents.
+        """
+        with self.lock:
+            dest = sqlite3.connect(path)
+            try:
+                self.conn.backup(dest)
+            finally:
+                dest.close()
+
     # -- generic helpers --------------------------------------------------- #
     def all(self, sql, params=()):
         with self.lock:

@@ -1,0 +1,22 @@
+# systemd unit template for the Sibintek AD jury.
+# Replace <user> and <repo>, then install (see deploy/README.md):
+#   sudo cp sibintek-jury.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now sibintek-jury
+# Logs: journalctl -u sibintek-jury -f
+
+[Unit]
+Description=Sibintek AD jury (rounds, flag submission, scoreboard)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=<user>
+WorkingDirectory=<repo>/AD_training
+# jury.json and jury/data/ are resolved relative to the repo by default.
+ExecStart=/usr/bin/python3 <repo>/AD_training/jury run
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

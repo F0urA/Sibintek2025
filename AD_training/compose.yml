@@ -2,6 +2,7 @@
 # SIBINTEK_BIND is set (training.py up --public uses 0.0.0.0 on a vulnbox).
 services:
   news:
+    restart: ${SIBINTEK_RESTART:-no}
     build: ../DNK_news/src
     environment:
       SECRET_KEY: ${SIBINTEK_NEWS_SECRET:?Run python3 AD_training/training.py up}
@@ -12,6 +13,7 @@ services:
       - news_data:/app/instance
 
   smp:
+    restart: ${SIBINTEK_RESTART:-no}
     build: ../SMP
     environment:
       ROCKET_PROFILE: release
@@ -23,6 +25,7 @@ services:
       - smp_data:/app/data
 
   web_db:
+    restart: ${SIBINTEK_RESTART:-no}
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: dws_db
@@ -37,6 +40,7 @@ services:
       retries: 20
 
   web:
+    restart: ${SIBINTEK_RESTART:-no}
     build: ../DNK_web/backend
     environment:
       DATABASE_URL: postgres://checker:${SIBINTEK_WEB_DB_PASSWORD:?Run python3 AD_training/training.py up}@web_db:5432/dws_db
@@ -53,6 +57,7 @@ services:
       - "${SIBINTEK_BIND:-127.0.0.1}:${SIBINTEK_WEB_PORT:-5001}:5001"
 
   blackline:
+    restart: ${SIBINTEK_RESTART:-no}
     build: ../DNK_blackLine/backend
     environment:
       ADDR: :8080

@@ -165,6 +165,20 @@ class JuryTest(unittest.TestCase):
         self.game.cfg["end_ts"] = self.clock.value
         self.assertEqual(self.submitter.submit(1, self.flag_of(2)), submit.OVER)
 
+    def test_backup_is_consistent(self):
+        self.game.play_round(1)
+        dest = Path(self.tmp.name) / "backup.sqlite"
+        self.game.db.backup(str(dest))
+        self.assertTrue(dest.exists())
+        copy = DB(str(dest))
+        try:
+            self.assertEqual(copy.one("SELECT COUNT(*) AS n FROM teams")["n"], 2)
+            self.assertEqual(copy.one("SELECT COUNT(*) AS n FROM flags")["n"],
+                             self.game.db.one("SELECT COUNT(*) AS n FROM flags")["n"])
+            self.assertEqual(copy.get_meta("round"), 1)
+        finally:
+            copy.close()
+
     def test_attack_data_shape(self):
         self.game.play_round(1)
         data = attack_data(self.game)
