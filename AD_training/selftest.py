@@ -258,8 +258,16 @@ EXPLOITS = {
 }
 
 
+FLAG_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+
+def forcad_flag():
+    """Same format the jury plants: [A-Z0-9]{31}=."""
+    return "".join(secrets.choice(FLAG_ALPHABET) for _ in range(31)) + "="
+
+
 def run_slot(service, slot, url):
-    flag = "FLAG{" + secrets.token_hex(12) + "}"
+    flag = forcad_flag()
     _, attack_data = checker_put(service, slot, flag, url)
     ok = EXPLOITS[(service, slot)](url, attack_data, flag)
     return ok, attack_data

@@ -24,6 +24,10 @@
 *.db
 **/data/
 
+# Jury: live config with team tokens and the game database
+AD_training/jury.json
+AD_training/jury/data/
+
 # Local IDE and OS files
 .vscode/
 .idea/

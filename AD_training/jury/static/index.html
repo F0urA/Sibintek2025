@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sibintek AD Scoreboard</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --text: #1b1f24; --muted: #667080; --line: #dde1e6;
+    --up: #1f9d55; --mumble: #e08a00; --corrupt: #7b4fd6; --down: #d64545; --failed: #8a919c;
+    --tint: 14%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111418; --panel: #1a1f25; --text: #e6e9ee; --muted: #8d97a5; --line: #2a313a;
+            --tint: 22%; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline;
+           padding: 20px 16px 12px; max-width: 1400px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 20px; font-weight: 650; }
+  .meta { display: flex; gap: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; overflow-x: auto; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 640px;
+          background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left;
+           vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+       letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .place { width: 40px; color: var(--muted); }
+  .team b { display: block; }
+  .team small { color: var(--muted); font-family: ui-monospace, monospace; }
+  .score { font-size: 16px; font-weight: 650; }
+  .cell { min-width: 150px; border-left: 4px solid var(--failed);
+          background: color-mix(in srgb, var(--failed) var(--tint), transparent); }
+  .cell.UP { border-left-color: var(--up); background: color-mix(in srgb, var(--up) var(--tint), transparent); }
+  .cell.MUMBLE { border-left-color: var(--mumble); background: color-mix(in srgb, var(--mumble) var(--tint), transparent); }
+  .cell.CORRUPT { border-left-color: var(--corrupt); background: color-mix(in srgb, var(--corrupt) var(--tint), transparent); }
+  .cell.DOWN { border-left-color: var(--down); background: color-mix(in srgb, var(--down) var(--tint), transparent); }
+  .cell.NONE { border-left-color: var(--line); background: none; }
+  .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .fp { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .verdict { font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+  .UP .verdict { color: var(--up); } .MUMBLE .verdict { color: var(--mumble); }
+  .CORRUPT .verdict { color: var(--corrupt); } .DOWN .verdict { color: var(--down); }
+  .CHECK_FAILED .verdict { color: var(--failed); }
+  .row2 { display: flex; gap: 10px; color: var(--muted); font-size: 12px;
+          font-variant-numeric: tabular-nums; }
+  .msg { color: var(--muted); font-size: 11px; max-width: 220px; white-space: nowrap;
+         overflow: hidden; text-overflow: ellipsis; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; color: var(--muted);
+            font-size: 12px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px;
+                         border-radius: 2px; margin-right: 6px; background: var(--c); }
+  .error { color: var(--down); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sibintek AD</h1>
+  <div class="meta">
+    <span>Раунд <b id="round">—</b></span>
+    <span id="timer-label">До следующего <b id="timer">—</b></span>
+    <span id="status"></span>
+  </div>
+</header>
+<div class="wrap">
+  <table>
+    <thead id="head"></thead>
+    <tbody id="body"><tr><td>Загрузка…</td></tr></tbody>
+  </table>
+  <div class="legend">
+    <span style="--c: var(--up)">UP — работает</span>
+    <span style="--c: var(--mumble)">MUMBLE — отвечает неправильно</span>
+    <span style="--c: var(--corrupt)">CORRUPT — флаг потерян</span>
+    <span style="--c: var(--down)">DOWN — недоступен</span>
+    <span style="--c: var(--failed)">CHECK FAILED — ошибка чекера</span>
+    <span style="--c: transparent">FP × SLA = очки; ▲ украдено, ▼ потеряно</span>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const STATE = {not_started: "Игра не началась", running: "", over: "Игра окончена"};
+let deadline = null;
+
+function cell(s) {
+  const verdict = s.verdict || "NONE";
+  const label = s.verdict ? s.verdict.replace("_", " ") : "—";
+  return `<td class="cell ${verdict}" title="${esc(s.message)}">
+    <div class="row1"><span class="fp">${s.fp.toFixed(1)}</span>
+      <span class="verdict">${esc(label)}</span></div>
+    <div class="row2"><span>SLA ${(s.sla * 100).toFixed(1)}%</span>
+      <span>▲${s.stolen}</span><span>▼${s.lost}</span></div>
+    ${s.verdict && s.verdict !== "UP" ? `<div class="msg">${esc(s.message)}</div>` : ""}
+  </td>`;
+}
+
+function render(data) {
+  $("round").textContent = data.round;
+  $("status").textContent = STATE[data.state] || "";
+  deadline = data.next_round_in == null ? null : Date.now() + data.next_round_in * 1000;
+  $("timer-label").style.display = deadline == null ? "none" : "";
+  $("head").innerHTML = `<tr><th class="place">#</th><th>Команда</th><th class="num">Очки</th>
+    ${data.services.map((s) => `<th>${esc(s)}</th>`).join("")}</tr>`;
+  $("body").innerHTML = data.teams.map((t) => `<tr>
+    <td class="place">${t.place}</td>
+    <td class="team"><b>${esc(t.name)}</b><small>${esc(t.ip)}</small></td>
+    <td class="num score">${t.score.toFixed(1)}</td>
+    ${data.services.map((s) => cell(t.services[s])).join("")}
+  </tr>`).join("");
+}
+
+function tick() {
+  if (deadline == null) return;
+  const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+  $("timer").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+}
+
+async function refresh() {
+  try {
+    const response = await fetch("/api/client/scoreboard", {cache: "no-store"});
+    render(await response.json());
+    tick();
+  } catch (err) {
+    $("status").innerHTML = `<span class="error">нет связи с жюри</span>`;
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
-# Local API-only deployment for AD practice. All published ports bind to loopback.
+# API-only deployment for AD practice. Ports bind to loopback unless
+# SIBINTEK_BIND is set (training.py up --public uses 0.0.0.0 on a vulnbox).
 services:
   news:
     build: ../DNK_news/src
@@ -6,7 +7,7 @@ services:
       SECRET_KEY: ${SIBINTEK_NEWS_SECRET:?Run python3 AD_training/training.py up}
       PORT: "3000"
     ports:
-      - "127.0.0.1:${SIBINTEK_NEWS_PORT:-3000}:3000"
+      - "${SIBINTEK_BIND:-127.0.0.1}:${SIBINTEK_NEWS_PORT:-3000}:3000"
     volumes:
       - news_data:/app/instance
 
@@ -17,7 +18,7 @@ services:
       ROCKET_ADDRESS: 0.0.0.0
       ROCKET_PORT: "7000"
     ports:
-      - "127.0.0.1:${SIBINTEK_SMP_PORT:-7000}:7000"
+      - "${SIBINTEK_BIND:-127.0.0.1}:${SIBINTEK_SMP_PORT:-7000}:7000"
     volumes:
       - smp_data:/app/data
 
@@ -49,7 +50,7 @@ services:
       web_db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${SIBINTEK_WEB_PORT:-5001}:5001"
+      - "${SIBINTEK_BIND:-127.0.0.1}:${SIBINTEK_WEB_PORT:-5001}:5001"
 
   blackline:
     build: ../DNK_blackLine/backend
@@ -60,7 +61,7 @@ services:
       DATA_DIR: /app/data
       DATABASE_URL: ""
     ports:
-      - "127.0.0.1:${SIBINTEK_BLACKLINE_PORT:-8080}:8080"
+      - "${SIBINTEK_BIND:-127.0.0.1}:${SIBINTEK_BLACKLINE_PORT:-8080}:8080"
     volumes:
       - blackline_keys:/app/keys
       - blackline_logs:/app/logs

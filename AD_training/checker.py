@@ -25,8 +25,40 @@ SLOTS = {
 }
 
 
+VERDICTS = ("UP", "CORRUPT", "MUMBLE", "DOWN", "CHECK_FAILED")
+
+
 class CheckerError(Exception):
-    pass
+    """Service misbehaves (ForcAD MUMBLE). Subclasses refine the verdict.
+
+    ``public`` is a short message safe to show on the scoreboard; the full text
+    (which may include response bodies) stays in ``str(exc)``.
+    """
+
+    verdict = "MUMBLE"
+
+    def __init__(self, message, public=None, status=None):
+        super().__init__(message)
+        self.public = public or message
+        self.status = status
+
+
+class Down(CheckerError):
+    """Service is unreachable or times out."""
+
+    verdict = "DOWN"
+
+
+class Corrupt(CheckerError):
+    """Service works, but a previously planted flag is gone."""
+
+    verdict = "CORRUPT"
+
+
+class CheckFailed(CheckerError):
+    """The checker itself was called wrongly; not the team's fault."""
+
+    verdict = "CHECK_FAILED"
 
 
 class Client:
@@ -37,6 +69,8 @@ class Client:
             urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
         )
         self.token = None
+        # During `get`, missing users/objects mean the flag was lost: CORRUPT.
+        self.missing = CheckerError
 
     def request(self, method, path, data=None, form=False):
         url = urllib.parse.urljoin(self.base, path.lstrip("/"))
@@ -62,9 +96,13 @@ class Client:
                 return response.status, response.url, response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             detail = exc.read(300).decode("utf-8", "replace")
-            raise CheckerError(f"HTTP {exc.code} at {path}: {detail}") from exc
+            route = path.split("?")[0]
+            cls = self.missing if exc.code in (401, 403, 404) else CheckerError
+            raise cls(f"HTTP {exc.code} at {path}: {detail}",
+                      public=f"HTTP {exc.code} at {route}", status=exc.code) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise CheckerError(f"Connection failed at {path}: {exc}") from exc
+            raise Down(f"Connection failed at {path}: {exc}",
+                       public="Connection failed") from exc
 
     def json(self, method, path, data=None):
         status, _, body = self.request(method, path, data)
@@ -78,16 +116,16 @@ def unique_user(prefix):
     return f"{prefix}_{secrets.token_hex(6)}", secrets.token_urlsafe(18)
 
 
-def need(condition, message):
+def need(condition, message, cls=CheckerError):
     if not condition:
-        raise CheckerError(message)
+        raise cls(message)
 
 
 def news_login(client, state):
     _, url, _ = client.request("POST", "/login", {
         "username": state["username"], "password": state["password"]
     }, form=True)
-    need(urllib.parse.urlparse(url).path != "/login", "News login failed")
+    need(urllib.parse.urlparse(url).path != "/login", "News login failed", client.missing)
 
 
 def put_news(client, slot, flag):
@@ -125,8 +163,8 @@ def get_news(client, slot, flag, state):
     news_login(client, state)
     path = f"/reports/{state['id']}" if slot == "report" else f"/news/{state['id']}"
     _, url, body = client.request("GET", path)
-    need(urllib.parse.urlparse(url).path == path, "News item unavailable")
-    need(flag in body, "Flag missing from News item")
+    need(urllib.parse.urlparse(url).path == path, "News item unavailable", Corrupt)
+    need(flag in body, "Flag missing from News item", Corrupt)
 
 
 def smp_login(client, state):
@@ -161,12 +199,12 @@ def get_smp(client, slot, flag, state):
     smp_login(client, state)
     if slot == "pigeon":
         _, item = client.json("GET", f"/api/pigeons/{state['pigeon_id']}")
-        need(item.get("description") == flag, "Flag missing from pigeon")
+        need(item.get("description") == flag, "Flag missing from pigeon", Corrupt)
     else:
         query = urllib.parse.urlencode({"message_id": state["message_id"]})
         _, items = client.json("GET", "/api/messages?" + query)
         need(any(item.get("id") == state["message_id"] and item.get("content") == flag
-                 for item in items), "Flag missing from message")
+                 for item in items), "Flag missing from message", Corrupt)
 
 
 def web_login(client, state):
@@ -214,7 +252,7 @@ def get_web(client, slot, flag, state):
     path = (f"/api/operations/{state['operation_id']}" if slot == "operation"
             else f"/api/routes/{state['route_id']}/gps")
     _, item = client.json("GET", path)
-    need(item.get("notes") == flag, "Flag missing from DNK_web item")
+    need(item.get("notes") == flag, "Flag missing from DNK_web item", Corrupt)
 
 
 BLACKLINE_PATHS = {
@@ -231,20 +269,40 @@ def blackline_login(client, state):
     client.token = data["jwt"]
 
 
-def blackline_find_tank(client, email, limit=512):
+def blackline_tank(client, tank_id):
+    """Public tank summary, or None when the id does not exist (HTTP 404)."""
+    try:
+        _, data = client.json("GET", f"/api/retail/tanks/{tank_id}/summary")
+    except CheckerError as exc:
+        if exc.status == 404:
+            return None
+        raise
+    return data
+
+
+def blackline_find_tank(client, email, window=256):
     """Locate the tank auto-created for this owner via the public summary.
 
     PUT /api/retail/profile/config seeds one tank per owner, but no API returns
-    its id. Tank ids are contiguous from 1 (tanks are never deleted), so we scan
-    the unauthenticated summary endpoint and match our own owner_email; the first
-    404 marks the end of the range.
+    its id. Tank ids are contiguous from 1 (tanks are never deleted), so we find
+    the highest existing id with an exponential + binary search over the
+    unauthenticated summary endpoint, then walk down matching our owner_email:
+    the tank we just created is at or near the top.
     """
-    for tank_id in range(1, limit + 1):
-        try:
-            _, data = client.json("GET", f"/api/retail/tanks/{tank_id}/summary")
-        except CheckerError:
-            break
-        if data.get("owner_email") == email:
+    if blackline_tank(client, 1) is None:
+        return None
+    low, high = 1, 2  # low exists; high is the probe
+    while blackline_tank(client, high) is not None:
+        low, high = high, high * 2
+    while high - low > 1:  # invariant: low exists, high does not
+        middle = (low + high) // 2
+        if blackline_tank(client, middle) is None:
+            high = middle
+        else:
+            low = middle
+    for tank_id in range(low, max(0, low - window), -1):
+        data = blackline_tank(client, tank_id)
+        if data is not None and data.get("owner_email") == email:
             return tank_id
     return None
 
@@ -285,14 +343,14 @@ def get_blackline(client, slot, flag, state):
     if slot in BLACKLINE_PATHS:
         path, field = BLACKLINE_PATHS[slot]
         _, data = client.json("GET", path)
-        need(data.get(field) == flag, "Flag missing from DNK_blackLine " + slot)
+        need(data.get(field) == flag, "Flag missing from DNK_blackLine " + slot, Corrupt)
     elif slot == "fleet":
         _, data = client.json("GET", f"/api/fleet/webhooks/{state['webhook_id']}")
-        need(data.get("secret_token") == flag, "Flag missing from webhook")
+        need(data.get("secret_token") == flag, "Flag missing from webhook", Corrupt)
     else:
         _, data = client.json("GET", "/api/audit/events")
         need(any(event.get("id") == state["event_id"] and event.get("log_flag") == flag
-                 for event in data["events"]), "Flag missing from audit event")
+                 for event in data["events"]), "Flag missing from audit event", Corrupt)
 
 
 PUT = {"news": put_news, "smp": put_smp, "web": put_web, "blackline": put_blackline}
@@ -333,8 +391,8 @@ def main():
         return 0
     if args.action not in ("check", "health"):
         need(args.slot in SLOTS[args.service],
-             "Choose --slot from: " + ", ".join(SLOTS[args.service]))
-        need(bool(args.flag), "--flag is required")
+             "Choose --slot from: " + ", ".join(SLOTS[args.service]), CheckFailed)
+        need(bool(args.flag), "--flag is required", CheckFailed)
     client = Client(args.url or DEFAULT_URLS[args.service], args.timeout)
     if args.action in ("check", "health"):
         client.request("GET", HEALTH[args.service])
@@ -345,26 +403,45 @@ def main():
         result = {"status": "ok", "service": args.service, "slot": args.slot,
                   "state": state, "attack_data": attack_data(args.service, args.slot, state)}
     else:
-        need(bool(args.state), "--state is required for get")
-        if args.state.startswith("@"):
-            with open(args.state[1:], encoding="utf-8") as handle:
-                source = handle.read()
-        else:
-            source = args.state
-        state = json.loads(source)
-        need(isinstance(state, dict), "--state must contain a JSON object")
-        if state.get("status") == "ok" and "state" in state:
-            state = state["state"]
-        need(isinstance(state, dict), "--state.state must be a JSON object")
+        state = load_state(args.state)
+        client.missing = Corrupt
         GET[args.service](client, args.slot, args.flag, state)
         result = {"status": "ok", "service": args.service, "slot": args.slot}
+    result["verdict"] = "UP"
     print(json.dumps(result, ensure_ascii=False))
     return 0
+
+
+def load_state(raw):
+    """Parse --state (inline JSON or @file); a bad state is the caller's fault."""
+    need(bool(raw), "--state is required for get", CheckFailed)
+    try:
+        if raw.startswith("@"):
+            with open(raw[1:], encoding="utf-8") as handle:
+                raw = handle.read()
+        state = json.loads(raw)
+    except (OSError, ValueError) as exc:
+        raise CheckFailed(f"Cannot read --state: {exc}") from exc
+    need(isinstance(state, dict), "--state must contain a JSON object", CheckFailed)
+    if state.get("status") == "ok" and "state" in state:
+        state = state["state"]
+    need(isinstance(state, dict), "--state.state must be a JSON object", CheckFailed)
+    return state
+
+
+def fail(verdict, public, error):
+    print(json.dumps({"status": "fail", "verdict": verdict, "public": public,
+                      "error": error}, ensure_ascii=False))
+    return 1
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (CheckerError, KeyError, ValueError, OSError) as exc:
-        print(json.dumps({"status": "fail", "error": str(exc)}, ensure_ascii=False))
-        sys.exit(1)
+    except CheckerError as exc:
+        sys.exit(fail(exc.verdict, exc.public, str(exc)))
+    except (KeyError, ValueError, TypeError, IndexError, AttributeError) as exc:
+        # The service answered, but not with the structure we expect.
+        sys.exit(fail("MUMBLE", "Unexpected response format", f"{type(exc).__name__}: {exc}"))
+    except Exception as exc:  # noqa: BLE001 - never crash without a verdict
+        sys.exit(fail("CHECK_FAILED", "Checker error", f"{type(exc).__name__}: {exc}"))

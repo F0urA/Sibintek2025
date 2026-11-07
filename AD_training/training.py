@@ -30,13 +30,21 @@ def ensure_secrets():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("up", "down", "ps"))
+    parser.add_argument("--public", action="store_true",
+                        help="vulnbox mode: publish ports on 0.0.0.0 so the jury and "
+                             "other teams can reach them (game network/VPN only!)")
     args = parser.parse_args()
+    env = dict(os.environ)
     if args.action == "up":
         ensure_secrets()
+        if args.public:
+            env["SIBINTEK_BIND"] = "0.0.0.0"
+            print("WARNING: intentionally vulnerable services are now listening on all "
+                  "interfaces. Expose them only inside the game network/VPN.")
     command = ["docker", "compose", "--env-file", str(ENV_FILE),
                "-f", str(ROOT / "compose.yml")]
     command += {"up": ["up", "--build", "-d"], "down": ["down"], "ps": ["ps"]}[args.action]
-    return subprocess.run(command, cwd=ROOT, check=False).returncode
+    return subprocess.run(command, cwd=ROOT, env=env, check=False).returncode
 
 
 if __name__ == "__main__":

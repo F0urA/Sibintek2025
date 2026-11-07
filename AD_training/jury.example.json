@@ -1,0 +1,50 @@
+{
+  "round_time": 60,
+  "flag_lifetime": 5,
+  "checker_timeout": 20,
+  "start_time": null,
+  "end_time": null,
+  "default_score": 1000,
+  "hardness": 10,
+  "listen": {
+    "http": "0.0.0.0:8000",
+    "tcp": "0.0.0.0:31337"
+  },
+  "services": {
+    "news": {
+      "port": 3000
+    },
+    "smp": {
+      "port": 7000
+    },
+    "web": {
+      "port": 5001
+    },
+    "blackline": {
+      "port": 8080
+    }
+  },
+  "teams": [
+    {
+      "name": "Team 1",
+      "ip": "10.60.1.2",
+      "token": "REPLACE_WITH_RANDOM_TOKEN_1"
+    },
+    {
+      "name": "Team 2",
+      "ip": "10.60.2.2",
+      "token": "REPLACE_WITH_RANDOM_TOKEN_2"
+    },
+    {
+      "name": "Local debug",
+      "ip": "127.0.0.1",
+      "token": "REPLACE_WITH_RANDOM_TOKEN_3",
+      "urls": {
+        "news": "http://127.0.0.1:13000",
+        "smp": "http://127.0.0.1:17000",
+        "web": "http://127.0.0.1:15001",
+        "blackline": "http://127.0.0.1:18080"
+      }
+    }
+  ]
+}
